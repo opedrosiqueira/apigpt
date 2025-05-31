@@ -1,0 +1,309 @@
+<h1 id="carregando-dados-no-sveltekit">Carregando Dados do Servidor</h1>
+<p>Antes que um componente <code>+page.svelte</code> (e seus componentes <code>+layout.svelte</code>) possa ser exibido no navegador, muitas vezes é necessário obter dados do servidor. Isso é feito por meio das funções <code>load</code>.</p>
+
+<h2 id="dados-da-página">Dados da Página</h2>
+
+<p>Um arquivo <code>+page.svelte</code> pode ter um arquivo irmão chamado <code>+page.server.js</code>, que é executado no servidor antes da página ser carregada no cliente. Esse arquivo exporta uma função <code>load</code>, cujo retorno será acessado na página por meio da propriedade <code>data</code>.</p>
+
+<p>Crie o arquivo <code ctc>src/routes/03/dados/+page.server.js</code>:</p>
+
+<pre><code class="language-javascript">export function load() {
+  return {
+    post: { title: 'Título de Exemplo', content: 'Conteúdo &lt;b&gt;supimpa&lt;/b&gt; de Exemplo' },
+    author: { name: 'Autor Exemplo', email: 'autor@exemplo.com' }
+  };
+}</code></pre>
+
+<p>Crie o arquivo <code ctc>src/routes/03/dados/+page.svelte</code>:</p>
+
+<pre><code class="language-svelte">&lt;script&gt;
+  let { data } = $props();
+&lt;/script&gt;
+
+&lt;h1&gt;{data.post.title}&lt;/h1&gt;
+&lt;sub&gt;por {data.author.name}&lt;/sub&gt;
+&lt;div&gt;{@html data.post.content}&lt;/div&gt;</code></pre>
+
+<p><strong>Explicação:</strong> A função <code>load</code> é chamada no servidor e retorna um objeto contendo os dados necessários para a página. Esses dados ficam disponíveis no componente por meio da propriedade <code>data</code>.</p>
+
+<p><img id="server-load" alt="servidor carrega dados para a página"></p>
+
+<h2 id="load-params">Parâmetros da Função <code>load</code></h2>
+
+<p>A função <code>load</code> recebe um objeto <a target="_blank" href="https://svelte.dev/docs/kit/@sveltejs-kit#ServerLoadEvent" id="serverloadevent"><code>ServerLoadEvent</code></a>, que contém informações úteis sobre a requisição, como <code>params</code>, <code>url</code> e <code>fetch</code>. Essas informações permitem acessar parâmetros da URL, fazer requisições, entre outros.</p>
+
+<p>Você pode inspecionar o conteúdo desse objeto modificando o arquivo <code>+page.server.js</code>:</p>
+
+<pre><code class="language-javascript">export function load(event) {
+  console.log(event);
+  return {
+    post: { title: 'Título de Exemplo', content: 'Conteúdo <b>supimpa</b> de Exemplo' },
+    author: { name: 'Autor Exemplo', email: 'autor@exemplo.com' }
+  };
+}</code></pre>
+
+<p><strong>Explicação:</strong> Esse código imprime no terminal do servidor as informações presentes no objeto <code>event</code>, que representa a requisição da página. Experimente acessar essa rota, e verifique no terminal as informações registradas.</p>
+
+<h2>Anatomia de uma URL</h2>
+
+<pre>    https://meusite.com/uma/pagina?p1=123&p2=oi
+    11111   22222222222 3333333333 444444444444
+protocolo   domínio     rota       consulta</pre>
+
+<ul>
+  <li>A rota (<em>route</em>) também é conhecida como caminho (<em>path</em>).</li>
+  <li>A consulta (<em>query</em>) também é conhecida como busca (<em>search</em>) ou <em>query string</em>.</li>
+  <li>Exemplo de uma URL real:
+    <pre class="text-center"><a target="_blank" href="https://www.youtube.com/watch?v=TiT7TlAWDEs&list=PLcZDQl73nB1ACZdEAd_wNbY0tB_QutcH3&index=2&t=360s&ab_channel=PedroHenriquedeAraujoSiqueira">
+https://www.youtube.com/watch
+?v=TiT7TlAWDEs
+&list=PLcZDQl73nB1ACZdEAd_wNbY0tB_QutcH3
+&index=2
+&t=360s
+&ab_channel=PedroHenriquedeAraujoSiqueira</a></pre>
+  </li>
+</ul>
+
+<h2 id="params">Parâmetros de Rota</h2>
+
+<p>As rotas em SvelteKit podem ser estáticas, como <code>src/routes/about</code>, ou dinâmicas, como <code>src/routes/blog/[slug]</code> ou <code>src/routes/posts/[ano]/[mes]</code>. As pastas entre colchetes representam <strong>parâmetros de rota</strong>, que são variáveis extraídas da URL mas que levam à mesma página.</p>
+
+<p>Exemplos:</p>
+<ul>
+  <li><code>/about</code> acessa a página em <code>src/routes/about</code>.</li>
+  <li><code>/blog/post1</code> e <code>/blog/post2</code> acessam <code>src/routes/blog/[slug]</code>, sendo <code>post1</code> e <code>post2</code> os valores de <code>[slug]</code>.</li>
+  <li><code>/posts/2025/03</code> e <code>/posts/2024/11</code> acessam <code>src/routes/posts/[ano]/[mes]</code>, sendo <code>2025</code> e <code>2024</code> os valores de <code>[ano]</code> e <code>03</code> e <code>11</code> os valores de <code>[mes]</code>.</li>
+</ul>
+
+<h4>Exercício de Fixação</h4>
+<ol>
+  <li>Ligue as URLs da esquerda às rotas da direita:
+    <pre>https://meusite.com/blog ------------ (a)
+https://meusite.com/sobre ----------- (b)
+https://meusite.com/blog/[slug] ----- (c)
+https://meusite.com/blog/artigo ----- (d)          (1) src/routes/about
+https://meusite.com/slug ------------ (e)          (2) src/routes/blog
+https://meusite.com/blog/2025/03 ---- (f)          (3) src/routes/blog/[slug]
+https://meusite.com/2025/03 --------- (g)          (4) src/routes/blog/[ano]/[mes]
+https://meusite.com/blog/2025 ------- (h)          (5) "erro 404"
+https://meusite.com/blog/outro/artigo (i)
+https://meusite.com/blog/about ------ (j)
+https://meusite.com/blog/2025/03/01 - (k)</pre>
+  </li>
+</ol>
+
+<p>Dentro da função <code>load</code>, os valores dos parâmetros de rota podem ser acessados via <code>event.params</code>.</p>
+
+<p>Crie o arquivo <code ctc>src/routes/03/[rota]/[dinamica]/+page.server.js</code>:</p>
+<pre><code class='js'>export function load(event) {
+  const parametro1 = event.params.rota;
+  const parametro2 = event.params.dinamica;
+
+return { parametro1, parametro2 };
+}</code></pre>
+
+<p>Crie o arquivo <code ctc>src/routes/03/[rota]/[dinamica]/+page.svelte</code>:</p>
+
+<pre><code class="svelte">&lt;script&gt;
+  let { data } = $props();
+&lt;/script&gt;
+
+&lt;p&gt;O primeiro parâmetro da rota é {data.parametro1}.&lt;/p&gt;
+&lt;p&gt;O segundo parâmetro da rota é {data.parametro2}.&lt;/p&gt;</code></pre>
+
+<p><strong>Explicação:</strong></p>
+<ul>
+  <li>Pastas entre colchetes (como <code>[rota]</code> e <code>[dinamica]</code>) representam parâmetros de rota, que são variáveis extraídas da URL. Isso permite que diferentes URLs acessem a mesma estrutura de rota.</li>
+  <li>Os valores dessas variáveis são automaticamente extraídos da URL e disponibilizados como propriedades do objeto <code>event.params</code>, onde os nomes devem coincidir com os nomes das pastas.</li>
+  <li>O objeto retornado pela função <code>load</code> fica disponível no componente <code>+page.svelte</code> através da propriedade <code>data</code>.</li>
+</ul>
+
+<div class="info">
+  <p><strong>Observação:</strong> É comum usar <a target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring_assignment">desestruturação</a> para extrair apenas as partes desejadas de um objeto passado como argumento a uma função. Isso torna o código mais limpo e direto.</p>
+  <p>Por exemplo, o arquivo <code>src/03/[rota]/[dinamica]/+page.server.js</code> poderia ficar assim:</p>
+
+  <pre><code class="js">export function load({ params }) {
+  const parametro1 = params.rota;
+  const parametro2 = params.dinamica;
+
+  return { parametro1, parametro2 };
+}</code></pre>
+
+  <p>No exemplo acima, desestruturamos apenas a propriedade <code>params</code> do objeto <code>event</code> recebido pela função <code>load</code>, já que as demais propriedades não são necessárias neste caso.</p>
+</div>
+
+<h2 id="url">Parâmetros de Consulta</h2>
+
+<p>Além dos <strong>parâmetros de rota</strong>, também podemos passar informações pela <strong>URL</strong> usando os chamados <strong>parâmetros de consulta</strong> — também conhecidos como <strong>query strings</strong> ou <strong>search params</strong>. Esses parâmetros aparecem após o símbolo <code>?</code> na URL. Por exemplo:</p>
+
+<pre><code>https://meusite.com/produtos?categoria=livros&amp;ordem=preco</code></pre>
+
+<p>Nesse caso, a URL possui dois parâmetros de consulta:</p>
+<ul>
+  <li><code>categoria</code> com valor <code>livros</code></li>
+  <li><code>ordem</code> com valor <code>preco</code></li>
+</ul>
+
+<p>No SvelteKit, dentro da função <code>load</code>, você pode acessar esses dados através da propriedade <code>url</code>, que é um objeto <a target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/API/URL">URL</a>.</p>
+
+<p>Esse objeto representa a URL da requisição e fornece várias informações úteis, como:</p>
+<ul>
+  <li><code>origin</code>: origem da URL (ex: <code>https://meusite.com</code>)</li>
+  <li><code>pathname</code>: caminho da URL (ex: <code>/produtos</code>)</li>
+  <li><code>searchParams</code>: um objeto <a target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams">URLSearchParams</a> que permite acessar os parâmetros de consulta facilmente.</li>
+</ul>
+
+<p>Crie o arquivo <code ctc>src/routes/03/formulario-recebendo/+page.server.js</code>:</p>
+
+<pre><code class="language-js">export function load({ url }) {
+  console.log(url);
+
+  const fruta = url.searchParams.get('fruta');
+  const legume = url.searchParams.get('legume');
+
+  return { fruta, legume };
+}</code></pre>
+
+<div class="info">
+  <p>💡 <strong>Dica:</strong> Aqui usamos <code>console.log()</code> para inspecionar o conteúdo da URL no terminal. Essa prática é muito útil para <strong>debugar</strong>: investigar e entender o que está acontecendo no seu código.</p>
+  <p>Quando estiver em dúvida sobre o valor de uma variável <code>x</code>, utilize <code>console.log(x)</code> para verificar seu conteúdo. Isso pode ajudar bastante na hora de identificar problemas e entender melhor o fluxo do programa.</p>
+</div>
+
+<p>Crie o arquivo <code ctc>src/routes/03/formulario-recebendo/+page.svelte</code>:</p>
+
+<pre><code class="language-svelte">&lt;script&gt;
+  let { data } = $props();
+&lt;/script&gt;
+
+{#if data.fruta &amp;&amp; data.legume}
+  Você gosta da fruta {data.fruta} e do legume {data.legume}
+{:else}
+  Informe uma fruta e um legume...
+{/if}
+
+&lt;p&gt;&lt;a href="/03/formulario-enviando"&gt;Voltar ao formulário&lt;/a&gt;&lt;/p&gt;
+</code></pre>
+
+<p><strong>Explicação:</strong></p>
+<ul>
+  <li>A função <code>load</code> extrai os parâmetros de consulta da URL usando <code>url.searchParams.get</code>.</li>
+  <li>Os valores obtidos são retornados à página.</li>
+  <li>A página exibe os dados recebidos ou solicita que o usuário informe-os, dependendo se os parâmetros de consulta foram informados ou não.</li>
+</ul>
+<p>Experimente acessar a url <code>/03/formulario-recebendo</code> no navegador, com e sem os parâmetros de consulta corretos, para ver os resultados!</p>
+
+<h4>Exercícios de Fixação</h4>
+<ol>
+  <li>Considere os seguintes arquivos:
+    <p><code>src/routes/03/[p1]/[p2]/+page.server.js</code>:</p>
+    <pre><code class="language-js">export function load({ params, url }) {
+  const rp1 = params.p1;
+  const rp2 = params.p2;
+  const sp1 = url.searchParams.get('p1');
+  const sp2 = url.searchParams.get('p2');
+
+  return { rp1, rp2, sp1, sp2 };
+}</code></pre>
+    <p><code>src/routes/03/[p1]/[p2]/+page.svelte</code>:</p>
+    <pre><code class="language-svelte">&lt;script&gt;
+  let { data } = $props();
+&lt;/script&gt;
+
+&lt;p&gt;Parâmetros de rota:&lt;/p&gt;
+&lt;ul&gt;&lt;li&gt;{data.rp1}&lt;/li&gt;&lt;li&gt;{data.rp2}&lt;/li&gt;&lt;/ul&gt;
+
+&lt;p&gt;Parâmetros de busca:&lt;/p&gt;
+&lt;ul&gt;&lt;li&gt;{data.sp1}&lt;/li&gt;&lt;li&gt;{data.sp2}&lt;/li&gt;&lt;/ul&gt;
+</code></pre>
+    <p>O que aparece na tela para cada uma das seguintes URLs?</p>
+    <ol type="a">
+      <li>https://meusite.com/03/uma/pagina?p1=123&amp;q4=567</li>
+      <li>https://meusite.com/03/uma/pagina?p1=123&amp;p2=oi</li>
+      <li>https://meusite.com/03/123/oi?p1=uma&amp;p2=pagina</li>
+      <li>https://meusite.com/03/uma/pagina?z8=123&amp;p2=567</li>
+      <li>https://meusite.com/03/umapagina?p1=123&amp;p2=oi</li>
+      <li>https://meusite.com/03/outra/url?p1=td_blz&amp;p2=ok</li>
+      <li>https://meusite.com/03/uma/pagina</li>
+      <li>https://meusite.com/03/uma/outra/pagina</li>
+      <li>https://meusite.com/03/p1/123?p2=567</li>
+      <li>https://meusite.com/03/p1/uma/pagina?p1=123&amp;p2=oi</li>
+    </ol>
+  </li>
+  <p><strong>Dicas:</strong></p>
+  <ul>
+    <li>Parâmetros de rota são obrigatórios: se não corresponderem à estrutura da URL esperada, ocorre erro 404.</li>
+    <li>Parâmetros de consulta são opcionais: se não estiverem presentes, o valor retornado por <code>url.searchParams.get()</code> será <code>null</code>, que não é exibido na tela.</li>
+  </ul>
+  <li>Considere os seguintes arquivos:
+    <p><code>src/routes/a/[b]/c/+page.server.js</code>:</p>
+    <pre><code class="language-js">export function load({ params, url }) {
+  const b = params.b;
+  const d = url.searchParams.get('d');
+  const e = url.searchParams.get('e');
+
+  return { b, d, e };
+}</code></pre>
+    <p><code>src/routes/a/[b]/c/+page.svelte</code>:</p>
+    <pre><code>&lt;script&gt;
+  let { data } = $props();
+&lt;/script&gt;
+{data.b} {data.d} {data.e}</code></pre>
+    <p>Dê exemplos de URLs que poderiam ser usadas para acessar essa rota. Para cada URL, explique o que apareceria na tela do navegador.</p>
+  </li>
+  <li>Considere os seguintes arquivos:
+    <p><code>src/routes/a/[b]/[c]/+page.server.js</code>:</p>
+    <pre><code class="js">export function load({ params, url }) {
+    const x = params.b;
+    const y = params.c;
+    const z = url.searchParams.get('d');
+
+    return { x, y, z };
+}</code></pre>
+    <p><code>src/routes/a/[b]/[c]/+page.svelte</code>:</p>
+    <pre><code>&lt;script&gt;
+  let { data } = $props();
+&lt;/script&gt;
+{data.x} {data.y} {data.z}</code></pre>
+    <p>Dê exemplos de URLs que poderiam ser usadas para acessar essa rota. Para cada URL, explique o que apareceria na tela do navegador.</p>
+  </li>
+  <li>Considere os seguintes arquivos:
+    <p><code>src/routes/[a]/b/[c]/+page.server.js</code>:</p>
+    <pre><code class="js">export function load({ params, url }) {
+    const w = params.a;
+    const x = params.c;
+    const y = url.searchParams.get('d');
+    const z = url.searchParams.get('e');
+
+    return { w, x, y, z };
+}</code></pre>
+    <p><code>src/routes/[a]/b/[c]/+page.svelte</code>:</p>
+    <pre><code>&lt;script&gt;
+  let { data } = $props();
+&lt;/script&gt;
+{data.w} {data.x} {data.y} {data.z}</code></pre>
+    <p>Dê exemplos de URLs que poderiam ser usadas para acessar essa rota. Para cada URL, explique o que apareceria na tela do navegador.</p>
+  </li>
+</ol>
+
+<h3>Enviando Dados via Formulário</h3>
+
+<p>Você pode acessar uma página digitando sua URL no navegador ou clicando em um link. Da mesma forma, parâmetros de consulta podem ser informados manualmente na URL ou enviados via formulário.</p>
+
+<p>Crie o arquivo <code ctc>src/routes/03/formulario-enviando/+page.svelte</code>:</p>
+
+<pre><code class="language-svelte">&lt;form action="/03/formulario-recebendo"&gt;
+  &lt;input name="fruta" placeholder="Qual tua fruta preferida?" /&gt;
+  &lt;input name="legume" placeholder="E legume?" /&gt;
+  &lt;button&gt;Enviar&lt;/button&gt;
+&lt;/form&gt;
+
+&lt;p&gt;&lt;a href="/03/formulario-recebendo"&gt;Ir&lt;/a&gt;&lt;/p&gt;</code></pre>
+
+<p><strong>Explicação:</strong></p>
+<ul>
+  <li>Tanto o atributo <code>action</code> do elemento <code>&lt;form&gt;</code>, quanto o atributo <code>href</code> do elemento <code>&lt;a&gt;</code>, redirecionam para a rota <code>/03/formulario-recebendo</code>.</li>
+  <li>Contudo, o <code>&lt;form&gt;</code> também envia dados para essa rota.</li>
+  <li>Esses dados devem vir de campos de entrada, como <code>input</code>, <code>textarea</code> ou <code>select</code>, que precisam ter um atributo <code>name</code> definido.</li>
+  <li>Por padrão, os dados de um <code>&lt;form&gt;</code> são enviados via URL como parâmetros de consulta — por exemplo: <code>?fruta=banana&amp;legume=cenoura</code>.</li>
+  <li>No lado do servidor, esses dados podem ser acessados na função <code>load</code> por meio de <code>url.searchParams.get()</code>.</li>
+</ul>
