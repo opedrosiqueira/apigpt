@@ -1,92 +1,80 @@
 import tiktoken
 from openai import OpenAI
 import pprint
+from typing import List, Dict, Any
 
-# examples of questions
-#
-# translate to pt_br
-# summarize in HTML format
+# Model definitions
+MODELS: List[Dict[str, str]] = [
+    {
+        "name": "o1-mini",
+        "obs": "Input Context Length 128,000 tokens. Output Context Length 65,536 tokens. Input Price $3 per 1M Tokens. Output Price $12 per 1M Tokens. Knowledge Cutoff 2023-09."
+    },
+    {
+        "name": "gpt-4o-mini",
+        "obs": "Input Context Length 128,000 tokens. Output Context Length 16,384 tokens. Input Price $0.15 per 1M Tokens. Output Price $0.60 per 1M Tokens. Knowledge Cutoff 2023-10-01."
+    },
+    {
+        "name": "gpt-4.1-nano",
+        "obs": "Input Context Length 1,047,576 tokens. Output Context Length 32,768 tokens. Input Price $0.10 per 1M Tokens. Output Price $0.40 per 1M Tokens. Knowledge Cutoff 2024-05-31."
+    }
+]
 
-model1 = "o1-mini"
-model2 = "gpt-4o"
-
-
-def menu(num_tokens):
-    match int(
-        input(
-            f"""
-text with {num_tokens} tokens. which model do you want?
-1. {model1} (up to ??? token including question+answer)
-2. {model2} (up to ??? token including question+answer)
-3. other (must inform)
-0. List available models and exit
-"""
-        )
-    ):
-        case 1:
-            return f"{model1}"
-        case 2:
-            return f"{model2}"
-        case 3:
-            return 3
-        case _:
-            return 0
-
-
-def num_tokens(string: str, encoding_name: str = "cl100k_base") -> int:
+def count_tokens(text: str, encoding_name: str = "cl100k_base") -> int:
+    """Count the number of tokens in a string using the specified encoding."""
     encoding = tiktoken.get_encoding(encoding_name)
-    num_tokens = len(encoding.encode(string))
-    return num_tokens
+    return len(encoding.encode(text))
 
+def select_model(num_tokens: int) -> str:
+    """Prompt user to select a model."""
+    print(f"\nText with {num_tokens} tokens. Which model do you want?")
+    print("0. List available models and exit")
+    print("1. Other (must inform)")
+    for idx, model in enumerate(MODELS, 2):
+        print(f"{idx}. {model['name']}: {model['obs']}")
+    try:
+        choice = int(input("Choice: "))
+    except ValueError:
+        return select_model(num_tokens)
+    if choice == 0:
+        return "LIST"
+    elif choice == 1:
+        return input("Inform the model: ")
+    elif 2 <= choice < len(MODELS) + 2:
+        return MODELS[choice - 2]["name"]
+    else:
+        return select_model(num_tokens)
 
-def models():
+def list_models(client: OpenAI) -> Any:
+    """List available models from the OpenAI client."""
     return client.models.list()
 
-
-def chat(user_content, system_content="You are a helpful assistant.", model=f"{model1}"):
-    response = client.responses.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": system_content},
-            {"role": "user", "content": user_content},
-        ],
-    )
-
+def ask(client: OpenAI, question: str, model: str) -> Any:
+    """Send a question to the OpenAI API using the specified model."""
+    response = client.responses.create(model=model, input=question)
     return response
 
+def main():
+    client = OpenAI()
+    file_path = input("Input file (leave blank to load from ./input.html): ") or "./input.html"
+    with open(file_path, "r", encoding="utf-8") as file:
+        question = file.read()
 
-client = OpenAI()
+    token_count = count_tokens(question)
+    model_choice = select_model(token_count)
 
-question = input("what you want to know? ")
+    if model_choice == "LIST":
+        pprint.pprint(list_models(client))
+        print("Exiting...")
+        return
 
-file_path = input("input file (leave blank to load from ./input.html): ") or "./input.html"
-with open(file_path, "r", encoding="utf-8") as file:
-    user_content = file.read()
+    print(f"Using '{model_choice}' for {token_count} tokens")
+    response = ask(client, question, model_choice)
+    data_to_save = response.output_text
 
-num_tokens = num_tokens(user_content)
+    pprint.pprint(response)
+    output_path = input("Output file (leave blank to save to ./output.md): ") or "./output.md"
+    with open(output_path, "w", encoding="utf-8") as file:
+        file.write(data_to_save)
 
-choice = menu(num_tokens)
-
-if choice == 0:
-    pprint.pprint(models())
-    print("exiting...")
-    quit()
-elif choice == 3:
-    model = input("inform the model: ")
-else:
-    model = choice
-
-print("using", model, "for", num_tokens, "tokens")
-completion = chat(user_content, question, model)
-
-data_to_save = completion.choices[0]
-
-# pprint.pprint(completion.choices[0].message.content)
-print(completion.choices[0].message.content)
-file_path = input("output file (leave blank to save to ./output.py): ") or "./output.py"
-with open(file_path, "w", encoding="utf-8") as file:
-    file.write(
-        'from dataclasses import make_dataclass\nStock = make_dataclass("Stock", ("symbol", "current", "high", "low"))\n\nChatCompletionMessage=make_dataclass("ChatCompletionMessage", ("content","role","function_call","tool_calls","refusal"))\nChoice=make_dataclass("Choice",("finish_reason", "index", "logprobs", "message"))\n\nresult = '
-    )
-    file.write(str(data_to_save))
-    file.write("\nprint(result.message.content)")
+if __name__ == "__main__":
+    main()
